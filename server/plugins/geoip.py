@@ -53,7 +53,7 @@ class Plugin:
 @celery_app.task
 def geoip(plugin_name, project_id, resource_id, resource_type, ip):
     result_status = PluginResultStatus.STARTED
-    response = None
+    result = None
 
     try:
         API_KEY = KeyRing().get("geoip")
@@ -76,9 +76,7 @@ def geoip(plugin_name, project_id, resource_id, resource_type, ip):
 
         resource = Resource(resource_id)
         if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, response, result_status
-            )
+            resource.set_plugin_results(plugin_name, project_id, result, result_status)
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)
