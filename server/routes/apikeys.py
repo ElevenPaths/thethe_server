@@ -33,13 +33,23 @@ def upload_apikeys(user):
         apikeys = request.json["entries"]
         for apikey in apikeys:
             result = DB("apikeys").collection.update_one(
-                {"name": apikey["name"]}, {"$set": {"apikey": apikey["apikey"]}}, True
+                {"name": apikey["name"]},
+                {"$set": {"apikey": apikey["apikey"]}},
+                upsert=True,
+            )
+
+            # Also updating "plugins" metadata
+            plugins = DB("plugins")
+            plugin = plugins.collection.update_one(
+                {"apikey_names": apikey["name"]}, {"$set": {"apikey_in_ddbb": True}}
             )
 
         return json.dumps(apikeys, default=str)
 
     except Exception as e:
-        print(e)
+        print(f"[routes/apikeys.upload_apikeys]: {e}")
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
         return jsonify({"error_message": "Error uploading API keys"}), 400
 
 
@@ -49,11 +59,18 @@ def remove_apikeys(user):
     try:
         apikeys = request.json["entries"]
         for name in apikeys:
-            print(name)
             result = DB("apikeys").collection.remove({"name": name["name"]})
+
+            # Also updating "plugins" metadata
+            plugins = DB("plugins")
+            plugin = plugins.collection.update_one(
+                {"apikey_names": name["name"]}, {"$set": {"apikey_in_ddbb": False}}
+            )
 
         return json.dumps(apikeys, default=str)
 
     except Exception as e:
-        print(e)
+        print(f"[routes/apikeys.remove_apikeys]: {e}")
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
         return jsonify({"error_message": "Error removing API keys"}), 400
