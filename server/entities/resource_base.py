@@ -253,7 +253,7 @@ class Resource:
                             "result_status": other["result_status"],
                         }
                     )
-                result["timemachine"]: timemachine
+                result["timemachine"] = timemachine
                 doc["plugins"].append(result)
 
         return json.loads(json.dumps(doc, default=str))
