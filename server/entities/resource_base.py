@@ -22,6 +22,11 @@ def get_resource_legacy_method(resource_id):
         Lookup the resource_id in all old documents
         Returns resource and doc name to change global COLLECTION
     """
+
+    print(
+        f"[resource_base.get_resource_legacy_method]: Legacy method called looking for resource {resource_id}"
+    )
+
     docs = ["ip", "url", "username", "hash", "email", "domain"]
 
     for doc in docs:
@@ -211,6 +216,9 @@ class Resource:
                         for entry in plugin["results"]
                     ]
 
+        else:
+            doc["plugins"] = []
+
         # New method
         plugins_names = PluginManager.get_plugins_names_for_resource(
             self.get_type_value()
@@ -221,19 +229,23 @@ class Resource:
             result_cursor = (
                 DB(plugin_name)
                 .collection.find(
-                    {
-                        "resource_id": self.get_id_as_string(),
-                        "result": {"$exists": True},
-                    }
+                    {"resource_id": self.resource_id, "results": {"$exists": True},}
                 )
                 .sort([("timestamp", pymongo.DESCENDING)])
+                .limit(5)
             )
 
             result_cursor = list(result_cursor)
             if not len(result_cursor) == 0:
                 # First result is the latests result
                 result = result_cursor[0]
-                timemachine = []
+                result["name"] = plugin_name
+                timemachine = [
+                    {
+                        "timestamp": result["timestamp"],
+                        "result_status": result["result_status"],
+                    }
+                ]
                 for other in result_cursor[1:]:
                     timemachine.append(
                         {
@@ -242,12 +254,6 @@ class Resource:
                         }
                     )
                 result["timemachine"]: timemachine
-
-                # Substitute new results if old exists
-                if "plugins" in doc:
-                    for plugin in doc["plugins"]:
-                        if "name" in plugin and plugin["name"] == plugin_name:
-                            doc["plugins"].remove(plugin)
-                            doc["plugins"].append(result)
+                doc["plugins"].append(result)
 
         return json.loads(json.dumps(doc, default=str))

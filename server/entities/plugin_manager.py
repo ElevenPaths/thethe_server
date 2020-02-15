@@ -3,6 +3,7 @@ import importlib
 import traceback
 import pymongo
 import time
+import bson
 
 from server.db import DB
 from server.entities.resource_types import ResourceType
@@ -193,7 +194,7 @@ class PluginManager:
             {
                 "results": query_result,
                 "timestamp": time.time(),
-                "resource_id": resource_id,
+                "resource_id": bson.ObjectId(resource_id),
                 "result_status": result_status.value,
             }
         )
