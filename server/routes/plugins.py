@@ -10,11 +10,11 @@ from flask import Blueprint, request, abort, jsonify
 
 from server.utils.password import token_required
 
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType, ResourceTypeException
 from server.entities.user import User
 from server.entities.pastebin_manager import PastebinManager
-from server.entities.plugin_manager import PluginManager
+from server.entities.resource_base import Resource
 
 plugins_api = Blueprint("plugins", __name__)
 

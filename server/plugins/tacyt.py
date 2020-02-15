@@ -1,5 +1,5 @@
 import traceback
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 
@@ -148,11 +148,9 @@ def tacyt(plugin_name, project_id, resource_id, resource_type, apk_hash):
             else:
                 result_status = PluginResultStatus.RETURN_NONE
 
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, application, result_status
-            )
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, application, result_status
+        )
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

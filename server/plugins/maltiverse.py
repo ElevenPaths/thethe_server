@@ -6,7 +6,7 @@ import requests
 
 from tasks.deps.maltiverse import Maltiverse
 from tasks.api_keys import KeyRing
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 from server.entities.plugin_result_types import PluginResultStatus
@@ -146,10 +146,8 @@ def maltiverse(plugin_name, project_id, resource_id, resource_type, target):
 
             print(query_result)
 
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, query_result, result_status
+            PluginManager.set_plugin_results(
+                resource_id, plugin_name, project_id, query_result, result_status
             )
 
     except Exception as e:

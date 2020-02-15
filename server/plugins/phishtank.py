@@ -9,7 +9,7 @@ from tasks.api_keys import KeyRing
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 from server.entities.plugin_result_types import PluginResultStatus
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 
 
 URL = "https://checkurl.phishtank.com/checkurl/"
@@ -189,11 +189,9 @@ def phishtank(plugin_name, project_id, resource_id, resource_type, url):
                 print("phishtank resource type does not found")
                 result_status = PluginResultStatus.RETURN_NONE
 
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, query_result, result_status
-            )
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, query_result, result_status
+        )
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

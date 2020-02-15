@@ -5,7 +5,7 @@ from server.entities.resource_types import ResourceType
 
 from tasks.tasks import celery_app
 from server.entities.plugin_result_types import PluginResultStatus
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 
 
 # Login with the following information:
@@ -17,7 +17,7 @@ from server.entities.resource_base import Resource
 import json
 import urllib.request
 from bs4 import BeautifulSoup
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 
 from server.entities.resource_manager import ResourceManager
 

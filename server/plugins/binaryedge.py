@@ -5,7 +5,7 @@ import json
 import requests
 
 from tasks.api_keys import KeyRing
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
@@ -76,7 +76,9 @@ def binaryedge(plugin_name, project_id, resource_id, resource_type, ip):
             response = json.loads(response.content)
             print(response)
 
-        finishing_task(plugin_name, project_id, resource_id, resource_type, response)
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, response, result_status
+        )
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

@@ -3,10 +3,11 @@ import json
 import requests
 
 from tasks.api_keys import KeyRing
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 from server.entities.plugin_result_types import PluginResultStatus
+from server.entities.plugin_manager import PluginManager
 
 URL = "https://api.abuseipdb.com/api/v2/check"
 
@@ -75,10 +76,8 @@ def abuseipdb(ip, plugin_name, project_id, resource_id, resource_type):
                 print(response)
                 result_status = PluginResultStatus.COMPLETED
 
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, response, result_status
+            PluginManager.set_plugin_results(
+                resource_id, plugin_name, project_id, response, result_status
             )
 
     except Exception as e:

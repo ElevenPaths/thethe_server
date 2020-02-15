@@ -7,7 +7,7 @@ import traceback
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 from server.entities.plugin_result_types import PluginResultStatus
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 
 # Which resources are this plugin able to work with
 RESOURCE_TARGET = [ResourceType.DOMAIN, ResourceType.EMAIL]
@@ -66,20 +66,17 @@ def whois(plugin_name, project_id, resource_id, resource_type, domain):
         else:
             result_status = PluginResultStatus.RETURN_NONE
 
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, query_result, result_status
-            )
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, query_result, result_status
+        )
 
     except whois.parser.PywhoisError:
         print(f"Domain {domain} does not exists")
         result_status = PluginResultStatus.RETURN_NONE
-        resource = Resource(resource_id)
-        if resource:
-            resource.set_plugin_results(
-                plugin_name, project_id, response, result_status
-            )
+
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, query_result, result_status
+        )
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

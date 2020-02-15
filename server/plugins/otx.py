@@ -22,7 +22,7 @@ URL_HOSTNAME = (
 URL_IPv4 = "https://otx.alienvault.com/api/v1/indicators/IPv4/{ip}/{section}"
 URL_IPv6 = "https://otx.alienvault.com/api/v1/indicators/IPv6/{ip}/{section}"
 
-from server.entities.resource_base import Resource
+from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
 
@@ -241,9 +241,8 @@ def otx_task(plugin_name, project_id, resource_id, resource_type, target):
         else:
             print("OTX resource type does not found")
 
-        resource = ResourceManager.get(resource_id)
-        resource.set_plugin_results(
-            plugin_name, project_id, resource_id, resource_type, query_result
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, query_result, result_status
         )
 
     except Exception as e:

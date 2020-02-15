@@ -2,9 +2,13 @@ import os
 import importlib
 import traceback
 import pymongo
+import time
 
 from server.db import DB
 from server.entities.resource_types import ResourceType
+from server.entities.plugin_result_types import PluginResultStatus
+from server.entities.update_central import UpdateCentral
+
 
 PLUGIN_DIRECTORY = "server/plugins/"
 PLUGIN_HIERARCHY = "server.plugins"
@@ -117,6 +121,17 @@ class PluginManager:
             )
         return results
 
+    @staticmethod
+    def get_plugins_names_for_resource(resource_type_as_string):
+        db = DB("plugins")
+        plugins = db.collection.find({"target": resource_type_as_string}).sort(
+            [("name", pymongo.ASCENDING)]
+        )
+        results = []
+        for entry in plugins:
+            results.append(entry["name"])
+        return results
+
     def __init__(self, resource, project_id):
         self.resource = resource
         self.project_id = project_id
@@ -154,3 +169,35 @@ class PluginManager:
             print(f"[PluginManager.launch] {e}")
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
+
+    @staticmethod
+    def set_plugin_results(
+        resource_id,
+        plugin_name,
+        project_id,
+        query_result,
+        result_status=PluginResultStatus.COMPLETED,
+    ):
+
+        db = DB(plugin_name)
+        last_document = db.collection.find({}).sort([("_id", -1)]).limit(1)
+
+        # HACK: There is no "count" or "length" method in pymongo Cursor
+        # TODO: use this to diff the last ddbb result with the latest one
+        if not len(list(last_document)) == 0:
+            pass
+        else:
+            pass
+
+        db.collection.insert_one(
+            {
+                "results": query_result,
+                "timestamp": time.time(),
+                "resource_id": resource_id,
+                "result_status": result_status.value,
+            }
+        )
+
+        UpdateCentral().set_pending_update(
+            project_id, resource_id, plugin_name, result_status,
+        )

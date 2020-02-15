@@ -1,6 +1,7 @@
 import traceback
 import json
 import bson
+import pymongo
 import time
 import urllib.parse
 
@@ -156,40 +157,9 @@ class Resource:
         query_result,
         result_status=PluginResultStatus.COMPLETED,
     ):
-        # TODO: Should we store an time-based diff of results if they differ?
-        if result_status == PluginResultStatus.COMPLETED:
 
-            result_exists = self.get_collection().find_one(
-                {"_id": self.resource_id, f"plugins.name": plugin_name}
-            )
-
-            if not result_exists:
-                self.get_collection().update_one(
-                    {"_id": self.resource_id},
-                    {
-                        "$addToSet": {
-                            "plugins": {
-                                "name": plugin_name,
-                                "results": query_result,
-                                "creation_time": time.time(),
-                                "update_time": time.time(),
-                            }
-                        }
-                    },
-                )
-
-            else:
-                for plugin in result_exists["plugins"]:
-                    if plugin["name"] == plugin_name:
-                        plugin["results"] = query_result
-                        plugin["update_time"] = time.time()
-
-                self.get_collection().replace_one(
-                    {"_id": self.resource_id}, result_exists
-                )
-
-        UpdateCentral().set_pending_update(
-            project_id, self.get_id_as_string(), plugin_name, result_status,
+        PluginManager.set_plugin_results(
+            self.resource_id, plugin_name, project_id, query_result, result_status
         )
 
     def manage_tag(self, tag):
@@ -220,6 +190,7 @@ class Resource:
             Client must JSON.parse() it in browser before passing it to Vuex
         """
 
+        # Get the complete document from a valid bson string reference
         def get_doc_if_reference(plugin_name, entry):
             if bson.ObjectId.is_valid(entry):
                 entry = DB(plugin_name + "s").collection.find_one(
@@ -227,15 +198,56 @@ class Resource:
                 )
             return entry
 
-        # doc = self.get_collection().find_one({"_id": self.resource_id})
-        # HACK:  Curiously, this seens to work in order to eliminated the double "" JSON encoding
-        #       when converting from ObjectId to String
+        # Doc is this resource json itself
         doc = self.resource
 
-        for plugin in doc["plugins"]:
-            if "results" in plugin and isinstance(plugin["results"], list):
-                plugin["results"] = [
-                    get_doc_if_reference(plugin["name"], entry)
-                    for entry in plugin["results"]
-                ]
+        # Let's see if we have a list of ObjectId instead of raw data
+        # Actually, this is here to deal with Pastebin plugin
+        if "plugins" in doc:
+            for plugin in doc["plugins"]:
+                if "results" in plugin and isinstance(plugin["results"], list):
+                    plugin["results"] = [
+                        get_doc_if_reference(plugin["name"], entry)
+                        for entry in plugin["results"]
+                    ]
+
+        # New method
+        plugins_names = PluginManager.get_plugins_names_for_resource(
+            self.get_type_value()
+        )
+
+        # Scan for results in all plugins resource type related
+        for plugin_name in plugins_names:
+            result_cursor = (
+                DB(plugin_name)
+                .collection.find(
+                    {
+                        "resource_id": self.get_id_as_string(),
+                        "result": {"$exists": True},
+                    }
+                )
+                .sort([("timestamp", pymongo.DESCENDING)])
+            )
+
+            result_cursor = list(result_cursor)
+            if not len(result_cursor) == 0:
+                # First result is the latests result
+                result = result_cursor[0]
+                timemachine = []
+                for other in result_cursor[1:]:
+                    timemachine.append(
+                        {
+                            "timestamp": other["timestamp"],
+                            "result_status": other["result_status"],
+                        }
+                    )
+                result["timemachine"]: timemachine
+
+                # Substitute new results if old exists
+                if "plugins" in doc:
+                    for plugin in doc["plugins"]:
+                        if "name" in plugin and plugin["name"] == plugin_name:
+                            doc["plugins"].remove(plugin)
+                            doc["plugins"].append(result)
+
         return json.loads(json.dumps(doc, default=str))

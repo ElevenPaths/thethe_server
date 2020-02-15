@@ -56,15 +56,3 @@ class ResourceManager:
             resource = Resource.create(resource_name, resource_type)
             created = True
         return (resource, created)
-
-    @staticmethod
-    def get_data_from_resources(resource_refs):
-        result = []
-        if not resource_refs:
-            return result
-
-        for resource_ref in resource_refs:
-            resource = ResourceManager.get(resource_ref["resource_id"],)
-            result.append(resource.get_data())
-
-        return result
