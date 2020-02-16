@@ -35,7 +35,6 @@ def get_all_plugins(user):
 @token_required
 def get_related_plugins(user):
     try:
-        resource_id = bson.ObjectId(request.json["resource_id"])
         resource_type_as_string = request.json["resource_type"]
         plugin_list = PluginManager.get_plugins_for_resource(resource_type_as_string)
 

@@ -42,6 +42,7 @@ def get_resource_legacy_method(resource_id):
     return (None, None)
 
 
+# TODO: This is calling for trouble. We need to have a proper hierarchy to handle diferent ENTITIES
 def enrich_by_type(args):
     resource_type = ResourceType(args["resource_type"])
 
