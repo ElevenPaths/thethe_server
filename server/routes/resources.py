@@ -149,3 +149,32 @@ def get_resource(user):
     except Exception as e:
         print(f"Error getting ip list {e}")
         return jsonify({"error_message": "Error getting resources"}), 400
+
+
+@resources_api.route("/api/get_lazy_plugin_results", methods=["POST"])
+@token_required
+def get_lazy_plugin_results(user):
+    """
+        Return a resource but with a plugin selected history snapshot
+    """
+
+    resource_id = request.json["params"]["resource_id"]
+    plugin_name = request.json["params"]["plugin_name"]
+    timestamp_index = request.json["params"]["timestamp_index"]
+
+    try:
+        resource = ResourceManager.get(resource_id)
+        if resource:
+            return jsonify(resource.to_JSON(timestamp_index=timestamp_index))
+        else:
+            return jsonify({"error_message": "Resource not found"})
+
+    except ValueError:
+        raise ResourceTypeException()
+
+    except ResourceTypeException:
+        return jsonify({"error_message": "Received an unknown type of resource"}), 400
+
+    except Exception as e:
+        print(f"Error getting ip list {e}")
+        return jsonify({"error_message": "Error getting resources"}), 400

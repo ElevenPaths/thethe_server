@@ -191,7 +191,7 @@ class Resource:
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
 
-    def to_JSON(self):
+    def to_JSON(self, timestamp_index=0):
         """
             Get the doc from DB and returns a JSON without the ObjectId
             Client must JSON.parse() it in browser before passing it to Vuex
@@ -221,8 +221,11 @@ class Resource:
 
             result_cursor = list(result_cursor)
             if not len(result_cursor) == 0:
-                # First result is the latests result
-                result = result_cursor[0]
+                # Test timestamp index
+                if timestamp_index < 0 or timestamp_index > len(result_cursor) - 1:
+                    result = result_cursor[0]
+                else:
+                    result = result_cursor[timestamp_index]
 
                 # Add name of the plugin, because we do not store it in database
                 result["name"] = plugin_name
@@ -230,20 +233,15 @@ class Resource:
                 # If this plugin results is a list of external references (case pastebin), load it:
                 _load_external_results(result)
 
-                # Add first result to the list of timemachine timestamps
-                timemachine = [
-                    {
-                        "timestamp": result["timestamp"],
-                        "result_status": result["result_status"],
-                    }
-                ]
+                # Load all timemachine timestamps
+                timemachine = []
 
                 # Add the last LIMIT_OF_TIMEMACHINE_RESULTS timestamps to timemachine
-                for other in result_cursor[1:]:
+                for ts in result_cursor:
                     timemachine.append(
                         {
-                            "timestamp": other["timestamp"],
-                            "result_status": other["result_status"],
+                            "timestamp": ts["timestamp"],
+                            "result_status": ts["result_status"],
                         }
                     )
 
