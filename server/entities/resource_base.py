@@ -14,6 +14,7 @@ from server.entities.resource_types import ResourceType
 from server.entities.hash_types import HashType
 
 COLLECTION = "resources"
+LIMIT_OF_TIMEMACHINE_RESULTS = 5
 
 # TODO: Legacy method for old database resources
 # TODO: Get rid of this legacy method
@@ -195,31 +196,13 @@ class Resource:
             Client must JSON.parse() it in browser before passing it to Vuex
         """
 
-        # Get the complete document from a valid bson string reference
-        def get_doc_if_reference(plugin_name, entry):
-            if bson.ObjectId.is_valid(entry):
-                entry = DB(plugin_name + "s").collection.find_one(
-                    {"_id": entry}, {"content": 0}
-                )
-            return entry
-
         # Doc is this resource json itself
         doc = self.resource
 
-        # Let's see if we have a list of ObjectId instead of raw data
-        # Actually, this is here to deal with Pastebin plugin
-        if "plugins" in doc:
-            for plugin in doc["plugins"]:
-                if "results" in plugin and isinstance(plugin["results"], list):
-                    plugin["results"] = [
-                        get_doc_if_reference(plugin["name"], entry)
-                        for entry in plugin["results"]
-                    ]
+        # Needed because FE expect it to be there
+        doc["plugins"] = []
 
-        else:
-            doc["plugins"] = []
-
-        # New method
+        # We need how many plugins can deal with this current resource type
         plugins_names = PluginManager.get_plugins_names_for_resource(
             self.get_type_value()
         )
@@ -232,20 +215,29 @@ class Resource:
                     {"resource_id": self.resource_id, "results": {"$exists": True},}
                 )
                 .sort([("timestamp", pymongo.DESCENDING)])
-                .limit(5)
+                .limit(LIMIT_OF_TIMEMACHINE_RESULTS)
             )
 
             result_cursor = list(result_cursor)
             if not len(result_cursor) == 0:
                 # First result is the latests result
                 result = result_cursor[0]
+
+                # Add name of the plugin, because we do not store it in database
                 result["name"] = plugin_name
+
+                # If this plugin results is a list of external references (case pastebin), load it:
+                _load_external_results(result)
+
+                # Add first result to the list of timemachine timestamps
                 timemachine = [
                     {
                         "timestamp": result["timestamp"],
                         "result_status": result["result_status"],
                     }
                 ]
+
+                # Add the last LIMIT_OF_TIMEMACHINE_RESULTS timestamps to timemachine
                 for other in result_cursor[1:]:
                     timemachine.append(
                         {
@@ -253,7 +245,28 @@ class Resource:
                             "result_status": other["result_status"],
                         }
                     )
+
+                # Plug timemachine results in our plugin results
                 result["timemachine"] = timemachine
+
+                # Plug this plugin results to doc
                 doc["plugins"].append(result)
 
         return json.loads(json.dumps(doc, default=str))
+
+    # Get the complete document from a valid bson string reference
+
+
+def _load_external_results(plugin):
+    if "results" in plugin and isinstance(plugin["results"], list):
+        plugin["results"] = [
+            _get_doc_if_reference(plugin["name"], entry) for entry in plugin["results"]
+        ]
+
+
+def _get_doc_if_reference(plugin_name, entry):
+    if bson.ObjectId.is_valid(entry):
+        entry = DB(plugin_name + "s").collection.find_one(
+            {"_id": entry}, {"content": 0}
+        )
+    return entry
