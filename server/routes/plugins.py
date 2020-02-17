@@ -81,3 +81,24 @@ def load_paste(user):
             jsonify({"error_message": "Something gone wrong when getting paste"}),
             400,
         )
+
+
+@plugins_api.route("/api/get_plugin_result_diff", methods=["POST"])
+@token_required
+def get_plugin_result_diff(user):
+    """
+        Return a diff view comparing to last one
+    """
+
+    resource_id = request.json["params"]["resource_id"]
+    plugin_name = request.json["params"]["plugin_name"]
+    timestamp_index = request.json["params"]["timestamp_index"]
+
+    try:
+        diff = PluginManager.get_diff(plugin_name, resource_id, timestamp_index)
+        if diff:
+            return jsonify(diff)
+
+    except Exception as e:
+        print(f"[/api/get_plugin_result_diff]: Error getting diff {e}")
+        return jsonify({"error_message": "Error getting diff"}), 400

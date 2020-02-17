@@ -6,6 +6,7 @@ import time
 import bson
 import hashlib
 import json
+import difflib
 
 from server.db import DB
 from server.entities.resource_types import ResourceType
@@ -237,3 +238,20 @@ class PluginManager:
         UpdateCentral().set_pending_update(
             project_id, resource_id, plugin_name, result_status,
         )
+
+    @staticmethod
+    def get_diff(plugin_name, resource_id, timestamp_index):
+        try:
+            db = DB(plugin_name)
+            if db:
+                right = db.collection.find(
+                    {"resource_id": bson.ObjectId(resource_id)}
+                ).sort([("timestamp", pymongo.DESCENDING)])[timestamp_index]
+
+            return None
+
+        except Exception as e:
+            print(f"[PluginManager.get_diff] {e}")
+            tb1 = traceback.TracebackException.from_exception(e)
+            print("".join(tb1.format()))
+            return None
