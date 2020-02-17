@@ -7,6 +7,7 @@ import bson
 import hashlib
 import json
 import difflib
+import pprint
 
 from server.db import DB
 from server.entities.resource_types import ResourceType
@@ -240,13 +241,27 @@ class PluginManager:
         )
 
     @staticmethod
-    def get_diff(plugin_name, resource_id, timestamp_index):
+    def get_diff(plugin_name, resource_id, index):
         try:
             db = DB(plugin_name)
             if db:
-                right = db.collection.find(
+                result_set = db.collection.find(
                     {"resource_id": bson.ObjectId(resource_id)}
-                ).sort([("timestamp", pymongo.DESCENDING)])[timestamp_index]
+                ).sort([("timestamp", pymongo.DESCENDING)])
+
+                result_set = list(result_set)
+
+                left = json.dumps(
+                    result_set[0]["results"], indent=4, sort_keys=True
+                ).split("\n")
+
+                right = json.dumps(
+                    result_set[index]["results"], indent=4, sort_keys=True
+                ).split("\n")
+
+            if left and right:
+                diff = difflib.unified_diff(left, right)
+                return "\n".join(diff)
 
             return None
 

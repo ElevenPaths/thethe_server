@@ -92,12 +92,12 @@ def get_plugin_result_diff(user):
 
     resource_id = request.json["params"]["resource_id"]
     plugin_name = request.json["params"]["plugin_name"]
-    timestamp_index = request.json["params"]["timestamp_index"]
+    index = request.json["params"]["index"]
 
     try:
-        diff = PluginManager.get_diff(plugin_name, resource_id, timestamp_index)
+        diff = PluginManager.get_diff(plugin_name, resource_id, index)
         if diff:
-            return jsonify(diff)
+            return jsonify({"diff": diff})
 
     except Exception as e:
         print(f"[/api/get_plugin_result_diff]: Error getting diff {e}")
