@@ -4,6 +4,8 @@ import traceback
 import pymongo
 import time
 import bson
+import hashlib
+import json
 
 from server.db import DB
 from server.entities.resource_types import ResourceType
@@ -181,23 +183,56 @@ class PluginManager:
     ):
 
         db = DB(plugin_name)
-        last_document = db.collection.find({}).sort([("_id", -1)]).limit(1)
+
+        # By default, we are inserting a new plugin result
+        insert_new_one = True
+
+        # Get the lastest document in the plugin collection for this resource
+        last_document = (
+            db.collection.find({"resource_id": bson.ObjectId(resource_id)})
+            .sort([("_id", -1)])
+            .limit(1)
+        )
 
         # HACK: There is no "count" or "length" method in pymongo Cursor
-        # TODO: use this to diff the last ddbb result with the latest one
-        if not len(list(last_document)) == 0:
-            pass
-        else:
-            pass
+        # Let's see if the new one is just the same as the last stored result
+        last_document = list(last_document)
+        if not len(last_document) == 0:
+            last_document = last_document[0]
 
-        db.collection.insert_one(
-            {
-                "results": query_result,
-                "timestamp": time.time(),
-                "resource_id": bson.ObjectId(resource_id),
-                "result_status": result_status.value,
-            }
-        )
+            md5_left = hashlib.md5()
+            md5_left.update(str(last_document["results"]).encode("utf-8"))
+            last_document_hexdigest = md5_left.hexdigest()
+            print(last_document_hexdigest)
+
+            md5_right = hashlib.md5()
+            md5_right.update(str(query_result).encode("utf-8"))
+            query_result_hexdigest = md5_right.hexdigest()
+            print(query_result_hexdigest)
+
+            # Result still the same, just update timestamp
+            if last_document_hexdigest == query_result_hexdigest:
+                db.collection.update_one(
+                    {"_id": bson.ObjectId(last_document["_id"])},
+                    {"$set": {"timestamp": time.time()}},
+                )
+                insert_new_one = False
+                result_status = PluginResultStatus.JUST_UPDATED
+
+            # This is a new result
+            else:
+                insert_new_one = True
+
+        # In any case, a new result must be stored
+        if insert_new_one:
+            db.collection.insert_one(
+                {
+                    "results": query_result,
+                    "timestamp": time.time(),
+                    "resource_id": bson.ObjectId(resource_id),
+                    "result_status": result_status.value,
+                }
+            )
 
         UpdateCentral().set_pending_update(
             project_id, resource_id, plugin_name, result_status,

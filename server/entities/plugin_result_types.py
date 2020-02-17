@@ -7,4 +7,5 @@ class PluginResultStatus(Enum):
     COMPLETED = (1,)
     RETURN_NONE = (2,)
     FAILED = (3,)
-    NO_API_KEY = 4
+    NO_API_KEY = (4,)
+    JUST_UPDATED = 5

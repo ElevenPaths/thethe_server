@@ -27,6 +27,9 @@ class UpdateCentral:
         elif result_status == PluginResultStatus.COMPLETED:
             message = f"successfully completed"
             status = "success"
+        elif result_status == PluginResultStatus.JUST_UPDATED:
+            message = f"Same result, just updating timestamp"
+            status = "info"
 
         print(f"[UpdateCentral.set_pending_update]: {status} {message}")
 

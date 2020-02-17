@@ -216,7 +216,6 @@ class Resource:
                     {"resource_id": self.resource_id, "results": {"$exists": True},}
                 )
                 .sort([("timestamp", pymongo.DESCENDING)])
-                .limit(LIMIT_OF_TIMEMACHINE_RESULTS)
             )
 
             result_cursor = list(result_cursor)
