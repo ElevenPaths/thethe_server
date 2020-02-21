@@ -1,11 +1,14 @@
-# TODO: Make this a secure key and in a enviroment variable
-_SECRET_KEY = "holakase"
+import os
+import sys
+
+_SECRET_KEY = os.environ["SECRET"]
 
 from itsdangerous import (
     TimedJSONWebSignatureSerializer as Serializer,
     BadSignature,
     SignatureExpired,
 )
+
 
 # TODO: Change expiration time when in production
 def generate_auth_token(user_id, expiration=600000):

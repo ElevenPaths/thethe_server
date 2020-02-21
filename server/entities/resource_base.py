@@ -169,27 +169,46 @@ class Resource:
             self.resource_id, plugin_name, project_id, query_result, result_status
         )
 
-    def manage_tag(self, tag):
+    def add_tag(self, tag):
         try:
-            resource = self.get_collection().find_one({"_id": self.resource_id})
-
-            if "tags" in resource:
-                if tag["name"] in [t["name"] for t in resource["tags"]]:
-                    resource["tags"] = [
-                        t for t in resource["tags"] if not t["name"] == tag["name"]
-                    ]
-                else:
-                    resource["tags"].append(
-                        {"name": tag["name"], "color": tag["color"]}
-                    )
+            if "tags" in self.resource:
+                if not tag["name"] in [t["name"] for t in self.resource["tags"]]:
+                    self.resource["tags"].append(tag)
             else:
-                resource["tags"] = [tag]
+                self.resource["tags"] = [tag]
 
-            self.get_collection().replace_one({"_id": self.resource_id}, resource)
+            self.get_collection().replace_one({"_id": self.resource_id}, self.resource)
+
+            return True
 
         except Exception as e:
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
+            return False
+
+    def remove_tag(self, tag):
+        try:
+            if "tags" in self.resource:
+
+                # If the tag is in, get it out (DELETE)
+                if tag["name"] in [t["name"] for t in self.resource["tags"]]:
+                    self.resource["tags"] = [
+                        t for t in self.resource["tags"] if not t["name"] == tag["name"]
+                    ]
+
+                    self.get_collection().replace_one(
+                        {"_id": self.resource_id}, self.resource
+                    )
+
+                return True
+
+            else:
+                return False
+
+        except Exception as e:
+            tb1 = traceback.TracebackException.from_exception(e)
+            print("".join(tb1.format()))
+            return False
 
     def to_JSON(self, timestamp_index=0):
         """
