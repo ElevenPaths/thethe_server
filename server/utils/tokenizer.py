@@ -1,7 +1,7 @@
 import os
 import sys
 
-_SECRET_KEY = os.environ["SECRET"]
+_SECRET_KEY = os.environ["THETHE_SECRET"]
 
 from itsdangerous import (
     TimedJSONWebSignatureSerializer as Serializer,
