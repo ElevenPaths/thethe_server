@@ -51,4 +51,7 @@ class User:
         if not projects:
             return None
         else:
-            return projects["project_refs"]
+            try:
+                return projects["project_refs"]
+            except KeyError:
+                return None
