@@ -45,6 +45,10 @@ class User:
         )
 
     def get_projects(self):
-        return self.db.collection.find_one({"_id": self.user_id}, {"project_refs": 1})[
-            "project_refs"
-        ]
+        projects = self.db.collection.find_one(
+            {"_id": self.user_id}, {"project_refs": 1}
+        )
+        if not projects:
+            return None
+        else:
+            return projects["project_refs"]
