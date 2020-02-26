@@ -52,6 +52,8 @@ def get_projects(user):
 
     except Exception as e:
         print(f"Error when retrieving projects")
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
         return jsonify({"error_message": "Error when retrieving projects"}), 400
 
 
