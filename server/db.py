@@ -1,5 +1,6 @@
 import traceback
 import time
+import bson
 
 from pymongo import MongoClient
 from server.entities.plugin_result_types import PluginResultStatus
@@ -48,12 +49,12 @@ def _move_plugin_results_outside(db_name):
                     try:
                         plugin_db.collection.insert_one(
                             {
+                                "resource_id": bson.ObjectId(doc["_id"]),
                                 "result_status": PluginResultStatus.COMPLETED.value,
                                 "results": plugin["results"],
                                 "timestamp": plugin["update_time"]
                                 if "update_time" in plugin
                                 else time.time(),
-                                "resource_id": doc["_id"],
                             }
                         )
                     except Exception as e:
