@@ -19,7 +19,7 @@ PLUGIN_DESCRIPTION = "Use a GeoIP service to geolocate an IP address"
 PLUGIN_DISABLE = False
 PLUGIN_IS_ACTIVE = False
 PLUGIN_NAME = "geoip"
-PLUGIN_NEEDS_API_KEY = False
+PLUGIN_NEEDS_API_KEY = True
 
 API_KEY = KeyRing().get("ipstack")
 API_KEY_IN_DDBB = bool(API_KEY)

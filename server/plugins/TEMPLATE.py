@@ -1,113 +1,79 @@
-# Put your Python standard libraries below this comment
+# Put your Python standard libraries here, for instance:
+# import sys
+# import json
 import traceback
 
-# Put your external dependencies here
+# Put your external dependencies here, for instance:
+# import requests
 
+from tasks.tasks import celery_app
+from server.entities.resource_types import ResourceType
+from server.entities.plugin_result_types import PluginResultStatus
+from server.entities.plugin_manager import PluginManager
 
-# [OPTIONAL] - Does your plugin need API-Keys?
+# Does your plugin need APIKEYS ?
+# <------ APIKEYS -------->
 from tasks.api_keys import KeyRing
 
+# replace "YOUR_PLUGIN_NAME" with the name of your plugin
 API_KEY = KeyRing().get("YOUR_PLUGIN_NAME")
+API_KEY_IN_DDBB = bool(API_KEY)
+# Put here the url of "how to get an apikey" instructions
+API_KEY_DOC = "https://apidoc"
+# Put here the key part of the tuple: "key:value". Some sites required you to have one or two kinds of secret and apikeys. Most of all just need the "apikey:value" tuple
+# API_KEY_NAMES = ["name_of_the_apikey", "name_of_the_secret"]
+# In case of single values, just:
+# API_KEY_NAMES = ["name_of_the_apikey"]
+#
+# <------ /APIKEYS -------->
+# If your plugin does not need APIKEYS just remove the last paragraph
 
 
-# [DONOTDELETE] - Internal usage dependencies
-from server.entities.resource_types import ResourceType
-from server.entities.plugin_manager import PluginManager
-from tasks.tasks import celery_app
-from server.entities.plugin_result_types import PluginResultStatus
+# <------ RESOURCE_TARGET ------->
 
+# What kind of resource can this plugin handle on?
 
-"""
-    RESOURCE_TARGET
+# Choices are:
 
-    What kind of resource can this plugin handle on?
+#     Resource.Type.DOMAIN
+#     Resource.Type.HASH
+#     Resource.Type.IPv4
+#     Resource.Type.URL
+#     Resource.Type.USERNAME
+#     Resource.Type.EMAIL
+#     Resource.Type.FILE
 
-    Choices are:
+# Example, we are going to process information for DOMAINs and EMAILs:
 
-        Resource.Type.DOMAIN
-        Resource.Type.HASH
-        Resource.Type.IPv4
-        Resource.Type.URL
-        Resource.Type.USERNAME
-
-"""
-
-# Example:
 RESOURCE_TARGET = [ResourceType.DOMAIN, ResourceType.EMAIL]
+# <------ /RESOURCE_TARGET ------->
 
 
-"""
+# <------ PLUGIN IDENTIFICATION ------>
 
-    PLUGIN_NAME
-
-        A name for your plugin. Do not use spaces or non-alphanumerics symbols.
-
-    PLUGIN_DESCRIPTION
-
-        One line description of your plugin main functionality. Be brief.
-
-"""
-
-# Example:
 PLUGIN_NAME = "plugin_name"
 PLUGIN_DESCRIPTION = "Lists all the people working in a company with their name and email address found on the web"
+# <------ /PLUGIN IDENTIFICATION ------>
 
 
-"""
-
-    PLUGIN_IS_ACTIVE = True
-
-        True means the plugin works by "calling" directly to the target resource.
-
-    PLUGIN_AUTOSTART = False
-
-        If True, the plugin will be automatically run when a new resource is added.
-
-    PLUGIN_DISABLE = False
-
-        If True, the plugin neither will be loaded nor will be shown in thethe. Use for development.
-
-    PLUGIN_NEEDS_API_KEY = True
-
-        If True, there is a api key in database, false is there is not api key.
-
-"""
-
+# <------- PLUGIN CONFIGURATION ------->
+# PLUGIN_IS_ACTIVE = True
+#     Active as in launching probes. This is, your target will know you are knoing at their gates.
+#  PLUGIN_AUTOSTART = False
+#     If True, the plugin will be automatically ran when a new resource is added. Be careful with this if your API have a limited rate.
+#  PLUGIN_DISABLE = False
+#     If True, the plugin neither will be loaded nor will be shown in thethe.
+#  PLUGIN_NEEDS_API_KEY = True
+#     If True, the plugin needs an APIKEY to work, False otherwise
 PLUGIN_IS_ACTIVE = False
 PLUGIN_AUTOSTART = False
 PLUGIN_DISABLE = False
 PLUGIN_NEEDS_API_KEY = True
 
-
-"""
-
-    YOUR CONSTANTS
-
-        Put here your CONSTS. Stuff like:
-
-            API_ENDPOINT = "https://api.endpoint.com/v2/"
-
-        etc.
-
-"""
-
-API_ENDPOINT = "https://api.endpoint.com/v2/"
-
-
-"""
-    Main class. A container for metadata and main action.
-
-    In a 99% percent of cases you would not touch this.
-
-"""
+# <------- /PLUGIN CONFIGURATION ------->
 
 
 class Plugin:
-    name = PLUGIN_NAME
-    description = PLUGIN_DESCRIPTION
-    is_active = PLUGIN_IS_ACTIVE
-    autostart = PLUGIN_AUTOSTART
-
     def __init__(self, resource, project_id):
         self.project_id = project_id
         self.resource = resource
@@ -144,7 +110,14 @@ class Plugin:
 
 @celery_app.task
 def main(plugin_name, project_id, resource_id, resource_type, target):
+    result_status = PluginResultStatus.STARTED
     try:
+        if PLUGIN_NEEDS_API_KEY:
+            API_KEY = KeyRing().get(PLUGIN_NAME)
+            if not API_KEY:
+                print("No API key...!")
+                result_status = PluginResultStatus.NO_API_KEY
+
         query_result = None
 
         resource_type = ResourceType(resource_type)
@@ -155,8 +128,8 @@ def main(plugin_name, project_id, resource_id, resource_type, target):
         else:
             print(f"[{PLUGIN_NAME}]: Resource type does not found")
 
-        finishing_task(
-            plugin_name, project_id, resource_id, resource_type, query_result
+        PluginManager.set_plugin_results(
+            resource_id, plugin_name, project_id, query_result, result_status
         )
 
     except Exception as e:
