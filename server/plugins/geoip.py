@@ -56,7 +56,7 @@ def geoip(plugin_name, project_id, resource_id, resource_type, ip):
     result = None
 
     try:
-        API_KEY = KeyRing().get("geoip")
+        API_KEY = KeyRing().get("ipstack")
         if not API_KEY:
             print("No API key...!")
             return None
