@@ -37,8 +37,13 @@ class DownloadWorker(threading.Thread):
 
                 # Assign a User-Agent for each file request.
                 # No -u
-                if mg.user_agent == "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)":
-                    headers["User-Agent"] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+                if (
+                    mg.user_agent
+                    == "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+                ):
+                    headers[
+                        "User-Agent"
+                    ] = "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
                 # -u
                 elif mg.user_agent is None:
                     user_agent_choice = random.choice(mg.random_user_agents).strip()
@@ -47,7 +52,13 @@ class DownloadWorker(threading.Thread):
                 else:
                     headers["User-Agent"] = mg.user_agent
 
-                response = requests.get(url, headers=headers, verify=False, timeout=mg.url_timeout, stream=True)
+                response = requests.get(
+                    url,
+                    headers=headers,
+                    verify=False,
+                    timeout=mg.url_timeout,
+                    stream=True,
+                )
 
                 # Download the file.
                 if response.status_code == 200:
@@ -184,7 +195,9 @@ class Metagoofil:
         if self.download_files:
             print(
                 "[+] Total download: {} bytes / {:.2f} KB / {:.2f} MB".format(
-                    self.total_bytes, self.total_bytes / 1024, self.total_bytes / (1024 * 1024)
+                    self.total_bytes,
+                    self.total_bytes / 1024,
+                    self.total_bytes / (1024 * 1024),
                 )
             )
 
@@ -218,19 +231,20 @@ class SmartFormatter(argparse.HelpFormatter):
         # This is the RawTextHelpFormatter._split_lines
         return argparse.HelpFormatter._split_lines(self, text, width)
 
+
 def _main(domain):
-    args =	{
+    args = {
         "domain": domain,
         "delay": 30.0,
         "save_links": False,
         "url_timeout": 15,
-        "search_max": 5,
+        "search_max": 100,
         "download_file_limit": 2,
         "save_directory": ".",
         "number_of_threads": 4,
-        "file_types": ["pdf","doc"],
+        "file_types": ["pdf", "doc"],
         "user_agent": None,
-        "download_files": False
+        "download_files": False,
     }
 
     global mg
@@ -241,9 +255,12 @@ def _main(domain):
 if __name__ == "__main__":
 
     parser = argparse.ArgumentParser(
-        description="Metagoofil - Search and download specific filetypes", formatter_class=SmartFormatter
+        description="Metagoofil - Search and download specific filetypes",
+        formatter_class=SmartFormatter,
     )
-    parser.add_argument("-d", dest="domain", action="store", required=True, help="Domain to search.")
+    parser.add_argument(
+        "-d", dest="domain", action="store", required=True, help="Domain to search."
+    )
     parser.add_argument(
         "-e",
         dest="delay",
@@ -268,7 +285,12 @@ if __name__ == "__main__":
         help="Number of seconds to wait before timeout for unreachable/stale pages.  DEFAULT: 15",
     )
     parser.add_argument(
-        "-l", dest="search_max", action="store", type=int, default=100, help="Maximum results to search.  DEFAULT: 100"
+        "-l",
+        dest="search_max",
+        action="store",
+        type=int,
+        default=100,
+        help="Maximum results to search.  DEFAULT: 100",
     )
     parser.add_argument(
         "-n",

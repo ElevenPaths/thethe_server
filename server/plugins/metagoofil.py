@@ -59,16 +59,7 @@ def metagoofil(domain, plugin_name, project_id, resource_id, resource_type):
 
         response = _metagoofil._main(domain)
 
-        files = []
-        for x in response:
-            url = urlparse(x)
-            filename = os.path.basename(url.path)
-            extension = filename.split(".")[1]
-            files.append(
-                {"filename": filename, "extension": extension.lower(), "url": x}
-            )
-
-        if files:
+        if response:
             result_status = PluginResultStatus.COMPLETED
         else:
             result_status = PluginResultStatus.RETURN_NONE
