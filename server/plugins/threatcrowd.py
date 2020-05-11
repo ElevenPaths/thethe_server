@@ -78,22 +78,22 @@ def send_request(url):
 
 def threatcrowd_ip(ip):
     url = URL_IP.format(**{"ip": ip})
-    send_request(url)
+    return send_request(url)
 
 
 def threatcrowd_domain(domain):
     url = URL_DOMAIN.format(**{"domain": domain})
-    send_request(url)
+    return send_request(url)
 
 
 def threatcrowd_email(email):
     url = URL_EMAIL.format(**{"email": email})
-    send_request(url)
+    return send_request(url)
 
 
 def threatcrowd_hash(hash):
     url = URL_HASH.format(**{"hash": hash})
-    send_request(url)
+    return send_request(url)
 
 
 @celery_app.task
