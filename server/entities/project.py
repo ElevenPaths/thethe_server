@@ -14,7 +14,7 @@ class Projects:
     @staticmethod
     def create(name, user):
         # TODO: extend project name validation
-        if name == "":
+        if name == "" or not name.isalnum():
             raise ProjectNameException()
 
         project = Projects.db.collection.find_one({"name": name})
@@ -56,6 +56,16 @@ class Project:
             {"_id": self.project_id},
             {"$pull": {"resource_refs": {"resource_id": resource_id}}},
         )
+
+    def rename(self, new_name):
+        if len(list(self.db.collection.find({"name": new_name}))) > 0:
+            return False
+
+        self.db.collection.find_one_and_update(
+            {"_id": self.project_id}, {"$set": {"name": new_name}},
+        )
+
+        return True
 
     def add_resource(self, resource):
         data = {

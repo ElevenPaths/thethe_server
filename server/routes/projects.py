@@ -9,6 +9,7 @@ from server.utils.password import token_required
 
 from server.entities.user import User
 from server.entities.project import (
+    Project,
     Projects,
     ProjectExistException,
     ProjectNameException,
@@ -16,6 +17,8 @@ from server.entities.project import (
 )
 
 from server.utils.desobjectid import desobjectid_cursor
+
+PROJECT_NAME_LIMIT = 64
 
 projects_api = Blueprint("projects", __name__)
 
@@ -83,6 +86,32 @@ def new_project(user):
         return jsonify({"error_message": "Error when creating a new project"}), 400
 
 
+@projects_api.route("/api/rename_project", methods=["POST"])
+@token_required
+def rename_project(user):
+    try:
+        project_id = bson.ObjectId(request.json["id"])
+        new_name = request.json["new_name"]
+
+        if not new_name.isalnum() or len(new_name) > PROJECT_NAME_LIMIT:
+            raise ProjectNameException
+
+        if project_id in User(user).get_projects():
+            project = Project(project_id)
+            if project.rename(new_name):
+                return jsonify({"success_message": f"Successful renaming"})
+
+        return jsonify({"error_message": "The name is not valid"}), 400
+
+    except ProjectNameException as e:
+        print(f"Project name error")
+        return jsonify({"error_message": "The name is not valid"}), 400
+
+    except Exception as e:
+        print(f"Error when renaming project {e}")
+        return jsonify({"error_message": "Error when renaming project"}), 400
+
+
 @projects_api.route("/api/delete_project", methods=["POST"])
 @token_required
 def delete_project(user):
@@ -134,4 +163,4 @@ def get_active_project(user):
 
     except Exception as e:
         print(f"Error when getting active project {e}")
-        return jsonify({"error_message": "Error during active project getting"}), 400
+        return jsonify({"error_message": "Error getting active project"}), 400
