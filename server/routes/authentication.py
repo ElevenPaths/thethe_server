@@ -25,8 +25,7 @@ def auth():
             if utils.verify_password(password, password_hash):
                 token = tokenizer.generate_auth_token(str(cursor["_id"]))
                 return jsonify({"token": token.decode("utf-8"), "username": username})
-        else:
-            return jsonify({"error_message": "Bad user or password"}), 401
+        return jsonify({"error_message": "Bad user or password"}), 401
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

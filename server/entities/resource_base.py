@@ -210,6 +210,12 @@ class Resource:
             print("".join(tb1.format()))
             return False
 
+    def resource_json(self):
+        doc = self.resource
+        doc["plugins"] = []
+        doc["full"] = False
+        return json.loads(json.dumps(doc, default=str))
+
     def to_JSON(self, timestamp_index=0):
         """
             Get the doc from DB and returns a JSON without the ObjectId

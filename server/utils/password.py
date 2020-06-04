@@ -24,13 +24,20 @@ def token_required(f):
                     jsonify({"error_message": "No authorization header in request"}),
                     401,
                 )
-
+            user = None
             token = request.headers["Authorization"]
-            user = tokenizer.verify_auth_token(token)["id"]
-            return f(user, *args, **kargs)
+            user = tokenizer.verify_auth_token(token)
+            if user:
+                user = user["id"]
+                return f(user, *args, **kargs)
+            else:
+                return (
+                    jsonify({"error_message": "Non valid token"}),
+                    401,
+                )
         except Exception as e:
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
-            return jsonify({"error_message": "Insecure request"}), 401
+            return jsonify({"error_message": "Non valid token"}), 401
 
     return decorated_function

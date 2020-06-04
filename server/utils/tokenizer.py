@@ -19,11 +19,12 @@ def generate_auth_token(user_id, expiration=600000):
 def verify_auth_token(token):
     s = Serializer(_SECRET_KEY)
     try:
+        user = None
         user = s.loads(token)
+        return user
     except SignatureExpired:
         print("[!] Invalid token: SignatureExpired")
-        raise SignatureExpired  # valid token, but expired
     except BadSignature:
         print("[!] Invalid token: BadSignature")
-        raise BadSignature  # invalid token
-    return user
+    finally:
+        return user
