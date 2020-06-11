@@ -1,16 +1,20 @@
 import traceback
 import time
 import bson
+import os
 
 from pymongo import MongoClient
 from server.entities.plugin_result_types import PluginResultStatus
 
 DATABASE_SCHEME_VERSION = 0.6
 
+MONGO_USER = os.environ["MONGO_INITDB_ROOT_USERNAME"]
+MONGO_PASS = os.environ["MONGO_INITDB_ROOT_PASSWORD"]
+
 
 class DB:
     def __init__(self, collection):
-        self.client = MongoClient("mongodb://root:root@mongo:27017/")
+        self.client = MongoClient(f"mongodb://{MONGO_USER}:{MONGO_PASS}@mongo:27017/")
         self.db = self.client.get_database("thethe")
         self.collection = self.db.get_collection(collection)
 

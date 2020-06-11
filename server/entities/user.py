@@ -14,7 +14,7 @@ class User:
             {"_id": self.user_id}, {"active_project": 1}
         )
 
-        if not "active_project" in result:
+        if not result or not "active_project" in result:
             return None
 
         return Project(result["active_project"])
