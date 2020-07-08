@@ -8,6 +8,8 @@ from flask import Blueprint, request, abort, jsonify
 
 from server.db import DB
 from server.utils.password import token_required
+from server.entities.plugin_manager import PluginManager
+
 
 apikeys_api = Blueprint("apikeys", __name__)
 
@@ -17,9 +19,28 @@ apikeys_api = Blueprint("apikeys", __name__)
 def get_apikeys(user):
     try:
         results = DB("apikeys").collection.find({}, {"_id": False})
+        plugins = PluginManager.get_all()
+        plugins = [plugin for plugin in list(plugins) if plugin.get("needs_apikey")]
+
         list_results = list(results)
 
-        return dumps(list_results)
+        for plugin in plugins:
+            apikey_names = plugin.get("apikey_names")
+            apikeys = []
+            for apikey_name in apikey_names:
+                apikey = {}
+                apikey_value = [
+                    value["apikey"]
+                    for value in list_results
+                    if value["name"] == apikey_name
+                ]
+                apikey["name"] = apikey_name
+                apikey["value"] = apikey_value[0] if len(apikey_value) > 0 else None
+                apikeys.append(apikey)
+
+            plugin["apikeys"] = apikeys
+
+        return dumps(plugins)
 
     except Exception as e:
         print(e)
@@ -34,7 +55,7 @@ def upload_apikeys(user):
         for apikey in apikeys:
             result = DB("apikeys").collection.update_one(
                 {"name": apikey["name"]},
-                {"$set": {"apikey": apikey["apikey"]}},
+                {"$set": {"apikey": apikey["value"]}},
                 upsert=True,
             )
 
@@ -44,33 +65,10 @@ def upload_apikeys(user):
                 {"apikey_names": apikey["name"]}, {"$set": {"apikey_in_ddbb": True}}
             )
 
-        return json.dumps(apikeys, default=str)
+        return json.dumps({"success_message": "Apikeys saved"}, default=str)
 
     except Exception as e:
         print(f"[routes/apikeys.upload_apikeys]: {e}")
         tb1 = traceback.TracebackException.from_exception(e)
         print("".join(tb1.format()))
         return jsonify({"error_message": "Error uploading API keys"}), 400
-
-
-@apikeys_api.route("/api/remove_apikeys", methods=["POST"])
-@token_required
-def remove_apikeys(user):
-    try:
-        apikeys = request.json["entries"]
-        for name in apikeys:
-            result = DB("apikeys").collection.remove({"name": name["name"]})
-
-            # Also updating "plugins" metadata
-            plugins = DB("plugins")
-            plugin = plugins.collection.update_one(
-                {"apikey_names": name["name"]}, {"$set": {"apikey_in_ddbb": False}}
-            )
-
-        return json.dumps(apikeys, default=str)
-
-    except Exception as e:
-        print(f"[routes/apikeys.remove_apikeys]: {e}")
-        tb1 = traceback.TracebackException.from_exception(e)
-        print("".join(tb1.format()))
-        return jsonify({"error_message": "Error removing API keys"}), 400

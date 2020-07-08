@@ -71,6 +71,11 @@ def _load_module(plugin_name):
 
 class PluginManager:
     @staticmethod
+    def get_all():
+        db = DB("plugins")
+        return db.collection.find({}, {"_id": False})
+
+    @staticmethod
     def get_plugin_names():
         try:
             db = DB("plugins")
