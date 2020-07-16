@@ -254,6 +254,21 @@ class Resource:
                 # Add name of the plugin, because we do not store it in database
                 result["name"] = plugin_name
 
+                try:
+                    raw_result = result.get("results")
+                    if raw_result and type(raw_result) == bytes:
+                        # From bytes of a Binary object to a str
+                        raw_result = bson.json_util.dumps(raw_result)
+                        # From str to Python object
+                        raw_result = json.loads(raw_result)
+                        # Extract $binary. Now we have a binary string in raw_result.
+                        raw_result = raw_result["$binary"]
+                        # Content is a b64 string...
+                        result["results"] = raw_result
+                except Exception as e:
+                    tb1 = traceback.TracebackException.from_exception(e)
+                    print("".join(tb1.format()))
+
                 # If this plugin results is a list of external references (case pastebin), load it:
                 _load_external_results(result)
 

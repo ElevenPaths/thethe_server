@@ -1,6 +1,7 @@
 import traceback
 import json
 import requests
+import base64
 
 from tasks.api_keys import KeyRing
 from tasks.tasks import celery_app
@@ -19,11 +20,13 @@ url_for_ips = "https://www.virustotal.com/vtapi/v2/ip-address/report"
 RESOURCE_TARGET = [
     ResourceType.URL,
     ResourceType.HASH,
+    ResourceType.DOMAIN,
+    ResourceType.IPv4
 ]
 
 # Plugin Metadata {a description, if target is actively reached and name}
 PLUGIN_AUTOSTART = False
-PLUGIN_DESCRIPTION = "Search a hash or a URL in VirusTotal"
+PLUGIN_DESCRIPTION = "Search a ip|domain|hash|url in VirusTotal"
 PLUGIN_DISABLE = False
 PLUGIN_IS_ACTIVE = False
 PLUGIN_NAME = "virustotal"
@@ -77,6 +80,7 @@ def virustotal(plugin_name, project_id, resource_id, resource_type, target):
             result_status = PluginResultStatus.NO_API_KEY
 
         else:
+            response = None
             url = None
             params = {"apikey": API_KEY}
 
@@ -101,13 +105,12 @@ def virustotal(plugin_name, project_id, resource_id, resource_type, target):
             response = requests.get(url, params=params)
 
             if not response.status_code == 200:
-                print(response)
                 result_status = PluginResultStatus.RETURN_NONE
             else:
-                response = json.loads(response.content)
+                response = response.content
                 result_status = PluginResultStatus.COMPLETED
 
-        print(response)
+        response = base64.b64encode(response)
 
         PluginManager.set_plugin_results(
             resource_id, plugin_name, project_id, response, result_status

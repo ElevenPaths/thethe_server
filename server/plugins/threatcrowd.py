@@ -8,10 +8,10 @@ from server.entities.plugin_manager import PluginManager
 from server.entities.plugin_result_types import PluginResultStatus
 
 
-URL_IP = "https://www.threatcrowd.org/searchApi/v2/ip/report/?ip={ip}"
-URL_DOMAIN = "https://www.threatcrowd.org/searchApi/v2/domain/report/?domain={domain}"
-URL_EMAIL = "https://www.threatcrowd.org/searchApi/v2/email/report/?email={email}"
-URL_HASH = "https://www.threatcrowd.org/searchApi/v2/file/report/?resource={hash}"
+URL_IP = "https://www.threatcrowd.org/searchApi/v2/ip/report/?ip={}"
+URL_DOMAIN = "https://www.threatcrowd.org/searchApi/v2/domain/report/?domain={}"
+URL_EMAIL = "https://www.threatcrowd.org/searchApi/v2/email/report/?email={}"
+URL_HASH = "https://www.threatcrowd.org/searchApi/v2/file/report/?resource={}"
 
 # Which resources are this plugin able to work with
 RESOURCE_TARGET = [
@@ -43,9 +43,15 @@ class Plugin:
     def do(self):
         resource_type = self.resource.get_type()
 
+        target = self.resource.get_data()["canonical_name"]
+
+        # Canonical data of hashes is its short form so we have to get long hash instead
+        if resource_type == ResourceType.HASH:
+            target = self.resource.get_data()["hash"]
+
         try:
             to_task = {
-                "target": self.resource.get_data()["canonical_name"],
+                "target": target,
                 "resource_id": self.resource.get_id_as_string(),
                 "project_id": self.project_id,
                 "resource_type": resource_type.value,
@@ -77,22 +83,22 @@ def send_request(url):
 
 
 def threatcrowd_ip(ip):
-    url = URL_IP.format(**{"ip": ip})
+    url = URL_IP.format(ip)
     return send_request(url)
 
 
 def threatcrowd_domain(domain):
-    url = URL_DOMAIN.format(**{"domain": domain})
+    url = URL_DOMAIN.format(domain)
     return send_request(url)
 
 
 def threatcrowd_email(email):
-    url = URL_EMAIL.format(**{"email": email})
+    url = URL_EMAIL.format(email)
     return send_request(url)
 
 
 def threatcrowd_hash(hash):
-    url = URL_HASH.format(**{"hash": hash})
+    url = URL_HASH.format(hash)
     return send_request(url)
 
 

@@ -4,7 +4,7 @@ import json
 import traceback
 import urllib.parse
 
-
+from bson.json_util import dumps
 from flask import Blueprint, request, abort, jsonify
 
 from server.utils.password import token_required
@@ -196,7 +196,7 @@ def get_full_resource(user):
     try:
         resource = ResourceManager.get(resource_id)
         if resource:
-            return jsonify(resource.to_JSON())
+            return dumps(resource.to_JSON())
         else:
             return jsonify({"error_message": "Resource not found"})
 
