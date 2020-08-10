@@ -7,9 +7,8 @@ from bson.json_util import dumps
 from flask import Blueprint, request, abort, jsonify
 
 from server.db import DB
-from server.utils.password import token_required
+from server.utils.tokenizer import token_required
 from server.entities.plugin_manager import PluginManager
-
 
 apikeys_api = Blueprint("apikeys", __name__)
 
@@ -18,6 +17,9 @@ apikeys_api = Blueprint("apikeys", __name__)
 @token_required
 def get_apikeys(user):
     try:
+        if not user.get("is_admin"):
+            return jsonify({"error_message": "User is not admin"}), 400
+
         results = DB("apikeys").collection.find({}, {"_id": False})
         plugins = PluginManager.get_all()
         plugins = [plugin for plugin in list(plugins) if plugin.get("needs_apikey")]
@@ -55,7 +57,7 @@ def upload_apikeys(user):
         for apikey in apikeys:
             result = DB("apikeys").collection.update_one(
                 {"name": apikey["name"]},
-                {"$set": {"apikey": apikey["value"]}},
+                {"$set": {"apikey": apikey["value"].strip()}},
                 upsert=True,
             )
 

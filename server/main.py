@@ -1,6 +1,7 @@
 from flask import Flask, render_template
 from flask_restful import Api
 from flask_cors import CORS
+from werkzeug.serving import WSGIRequestHandler
 
 from server.routes.authentication import authentication_api
 from server.routes.projects import projects_api
@@ -8,6 +9,7 @@ from server.routes.resources import resources_api
 from server.routes.plugins import plugins_api
 from server.routes.tags import tags_api
 from server.routes.apikeys import apikeys_api
+from server.routes.search import search_api
 
 # Workaround due to template confusion between jinja2 and Vue
 # See: https://github.com/yymm/flask-vuejs
@@ -32,10 +34,12 @@ app.register_blueprint(resources_api)
 app.register_blueprint(plugins_api)
 app.register_blueprint(tags_api)
 app.register_blueprint(apikeys_api)
+app.register_blueprint(search_api)
 
 cors = CORS(app, resources={r"/api/*": {"origins": "*"}})
 api_app = Api(app)
 
 if __name__ == "__main__":
     # TODO: Remove debug param in production
-    app.run(debug=True)
+    WSGIRequestHandler.protocol_version = "HTTP/1.1"
+    app.run(debug=True, threaded=True)

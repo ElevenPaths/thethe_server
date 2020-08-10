@@ -1,7 +1,7 @@
 import json
 import traceback
 import json
-import urllib.request
+import requests
 
 from tasks.api_keys import KeyRing
 from server.entities.plugin_manager import PluginManager
@@ -11,11 +11,13 @@ from server.entities.plugin_result_types import PluginResultStatus
 
 
 # Which resources are this plugin able to work with
-RESOURCE_TARGET = [ResourceType.IPv4]
+RESOURCE_TARGET = [ResourceType.IPv4, ResourceType.DOMAIN]
 
 # Plugin Metadata {a description, if target is actively reached and name}
 PLUGIN_AUTOSTART = False
-PLUGIN_DESCRIPTION = "Lookup onyphe.io wether this IP is included in threatlists"
+PLUGIN_DESCRIPTION = (
+    "Lookup onyphe.io wether this IP or Domain is included in threatlists"
+)
 PLUGIN_IS_ACTIVE = False
 PLUGIN_DISABLE = False
 PLUGIN_NAME = "onyphe"
@@ -37,7 +39,7 @@ class Plugin:
 
         try:
             to_task = {
-                "ip": self.resource.get_data()["address"],
+                "resource": self.resource.get_data()["canonical_name"],
                 "resource_id": self.resource.get_id_as_string(),
                 "project_id": self.project_id,
                 "resource_type": resource_type.value,
@@ -50,54 +52,8 @@ class Plugin:
             print("".join(tb1.format()))
 
 
-def onyphe_threatlist(ip):
-    try:
-        API_KEY = KeyRing().get("onyphe")
-        if not API_KEY:
-            print("No API key...!")
-            return None
-
-        URL = f"https://www.onyphe.io/api/threatlist/{ip}?apikey={API_KEY}"
-        response = urllib.request.urlopen(URL).read()
-        response = json.loads(response)
-
-        threatlists = {"threatlists": []}
-        if "results" in response:
-            for entry in response["results"]:
-                if "threatlist" in entry:
-                    threatlists["threatlists"].append(entry["threatlist"])
-        threatlists["threatlists"] = list(set(threatlists["threatlists"]))
-        threatlists["threatlists"].sort()
-        return threatlists
-
-    except Exception as e:
-        tb1 = traceback.TracebackException.from_exception(e)
-        print("".join(tb1.format()))
-        return None
-
-
-def onyphe_synscan(ip):
-    result_status = PluginResultStatus.STARTED
-    reponse
-
-    try:
-        API_KEY = KeyRing().get("onyphe")
-        if not API_KEY:
-            print("No API key...!")
-            result_status = PluginResultStatus.NO_API_KEY
-
-        URL = f"https://www.onyphe.io/api/synscan/{ip}?apikey={API_KEY}"
-        response = urllib.request.urlopen(URL).read()
-        return response
-
-    except Exception as e:
-        tb1 = traceback.TracebackException.from_exception(e)
-        print("".join(tb1.format()))
-        return None
-
-
 @celery_app.task
-def onyphe(plugin_name, project_id, resource_id, resource_type, ip):
+def onyphe(plugin_name, project_id, resource_id, resource_type, resource):
     result_status = PluginResultStatus.STARTED
     query_result = None
 
@@ -108,12 +64,30 @@ def onyphe(plugin_name, project_id, resource_id, resource_type, ip):
             result_status = PluginResultStatus.NO_API_KEY
 
         else:
-            query_result = onyphe_threatlist(ip)
-            if not query_result:
-                result_status = PluginResultStatus.RETURN_NONE
+            url = ""
+            headers = {
+                "Authorization": f"apikey {API_KEY}",
+                "Content-Type": "application/json",
+            }
+
+            if resource_type == "domain":
+                url = f"https://www.onyphe.io/api/v2/summary/domain/{resource}"
+            elif resource_type == "ip":
+                url = f"https://www.onyphe.io/api/v2/summary/ip/{resource}"
+
+            query_result = requests.get(url, headers=headers)
+
+            if query_result.status_code == 200:
+                json_results = query_result.json()
+
+                if json_results["results"] == []:
+                    result_status = PluginResultStatus.RETURN_NONE
+                else:
+                    query_result = json_results["results"]
+                    result_status = PluginResultStatus.COMPLETED
+
             else:
-                print(query_result)
-                result_status = PluginResultStatus.COMPLETED
+                result_status = PluginResultStatus.FAILED
 
         PluginManager.set_plugin_results(
             resource_id, plugin_name, project_id, query_result, result_status

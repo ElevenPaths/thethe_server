@@ -8,7 +8,7 @@ import importlib
 
 from flask import Blueprint, request, abort, jsonify
 
-from server.utils.password import token_required
+from server.utils.tokenizer import token_required
 
 from server.entities.plugin_manager import PluginManager
 from server.entities.resource_types import ResourceType, ResourceTypeException
@@ -52,7 +52,7 @@ def launch_plugin(user):
         resource_id = bson.ObjectId(request.json["resource_id"])
         plugin_name = request.json["plugin_name"]
 
-        project = User(user).get_active_project()
+        project = User(user.get("_id")).get_active_project()
         resource = Resource(resource_id)
 
         resource.launch_plugin(project.get_id(), plugin_name)
@@ -98,6 +98,8 @@ def get_plugin_result_diff(user):
         diff = PluginManager.get_diff(plugin_name, resource_id, index)
         if diff:
             return jsonify({"diff": diff})
+        else:
+            return jsonify({"diff": "no diff"})
 
     except Exception as e:
         print(f"[/api/get_plugin_result_diff]: Error getting diff {e}")

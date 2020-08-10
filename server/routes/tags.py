@@ -7,13 +7,11 @@ import urllib.parse
 
 from flask import Blueprint, request, abort, jsonify
 
-from server.utils.password import token_required
+from server.utils.tokenizer import token_required
 
 from server.entities.resource_manager import ResourceManager
-from server.entities.resource_types import ResourceType, ResourceTypeException
 from server.entities.user import User
-
-from server.entities.tag_manager import TagManager, AVAILABLE_COLORS, TagErrors
+from server.entities.tags import TagManager
 
 tags_api = Blueprint("tags", __name__)
 
@@ -22,96 +20,77 @@ tags_api = Blueprint("tags", __name__)
 @token_required
 def get_tags(user):
     try:
-        tags_list = TagManager().get_tags()
-        result = {"tags": json.loads(json.dumps(tags_list, default=str))}
-        return jsonify(result)
+        tags = TagManager.get_tags()
+        return bson.json_util.dumps(tags)
 
     except Exception as e:
         print(e)
         return jsonify({"error_message": "Error getting global tags"}), 400
 
 
-@tags_api.route("/api/add_new_tag", methods=["POST"])
+@tags_api.route("/api/create_tag", methods=["POST"])
 @token_required
-def add_new_tag(user):
+def create_tag(user):
     try:
-        name = request.json["tag"]["name"]
-        color = request.json["tag"]["color"]
-
-        results = TagManager().new({"name": name, "color": color})
-
-        if results == TagErrors.NONE:
-            return jsonify({"done": True, "message": f"Tag {name} created"})
-
-        elif results == TagErrors.NAME_NOT_COMPLIANT:
-            return jsonify(
-                {
-                    "done": False,
-                    "message": "Name should be only alphanumeric, all lowercase",
-                },
+        can_manage_tags = user.get("permissions").get("tags")
+        if not can_manage_tags:
+            return (
+                jsonify({"error_message": "You don't have permissions to manage tags"}),
+                400,
             )
 
-        elif results == TagErrors.ALREADY_EXISTS:
-            return jsonify({"done": False, "message": f"Tag {name} already exists"})
+        tag = request.json.get("tag")
 
-        elif results == TagErrors.COLOR_NOT_COMPLIANT:
-            return jsonify({"done": False, "message": "Unknown color"})
+        valid, message = TagManager.create(tag)
+
+        if valid:
+            return jsonify({"success_message": message})
+
+        return jsonify({"error_message": message}), 400
 
     except Exception as e:
-        print(e)
-        return jsonify({"done": False, "message": "Error adding new tag"})
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
+        return jsonify({"error_message": "Error creating tag"}), 400
 
 
-@tags_api.route("/api/update_tag", methods=["POST"])
+@tags_api.route("/api/delete_tag", methods=["POST"])
 @token_required
-def update_tag(user):
+def delete_tag(user):
     try:
+        can_manage_tags = user.get("permissions").get("tags")
+        if not can_manage_tags:
+            return (
+                jsonify({"error_message": "You don't have permissions to manage tags"}),
+                400,
+            )
 
-        pass
-    except Exception as e:
-        print(e)
-        return (
-            jsonify({"error_message": "Something gone wrong when getting paste"}),
-            400,
-        )
+        tag_id = request.json.get("tag_id")
 
-
-@tags_api.route("/api/get_tag_colors", methods=["POST"])
-@token_required
-def get_tag_colors(user):
-    try:
-        tag_colors = {"tag_colors": AVAILABLE_COLORS}
-        return jsonify(tag_colors)
+        success, message = TagManager.delete(bson.ObjectId(tag_id))
+        if success:
+            return jsonify({"success_message": message})
+        else:
+            return jsonify({"error_message": message}), 400
 
     except Exception as e:
-        print(e)
-        return jsonify({"error_message": "Error getting global tags"}), 400
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
+        return jsonify({"error_message": "Error deleting tag"}), 400
 
 
 @tags_api.route("/api/add_tag", methods=["POST"])
 @token_required
 def add_tag(user):
     try:
-        resource_id = bson.ObjectId(request.json["params"]["resource_id"])
-        tag = request.json["params"]["tag"]
+        resource_id = request.json["resource_id"]
+        tag_id = request.json["tag_id"]
 
-        if TagManager().exists(tag):
-            resource = ResourceManager.get(resource_id)
+        resource = ResourceManager.get(resource_id)
 
-            if resource.add_tag(tag):
-                return jsonify(
-                    {"done": True, "message": f"Tag {tag['name']} added to resource"}
-                )
+        resource.add_tag(tag_id)
 
-            else:
-                jsonify(
-                    {
-                        "done": False,
-                        "message": "Cannot add this tag to the selected resource",
-                    }
-                )
-
-        return jsonify({"done": False, "message": "Error adding new tag"})
+        return jsonify({"success_message": "Tag added to resource"})
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)
@@ -123,29 +102,19 @@ def add_tag(user):
 @token_required
 def remove_tag(user):
     try:
-        resource_id = bson.ObjectId(request.json["params"]["resource_id"])
-        tag = request.json["params"]["tag"]
+        resource_id = request.json["resource_id"]
+        tag_id = request.json["tag_id"]
 
-        if TagManager().exists(tag):
-            resource = ResourceManager.get(resource_id)
+        resource = ResourceManager.get(resource_id)
 
-            if resource.remove_tag(tag):
-                return jsonify(
-                    {
-                        "done": True,
-                        "message": f"Tag {tag['name']} removed from resource",
-                    }
-                )
+        if resource.remove_tag(tag_id):
+            return jsonify({"success_message": "Tag removed to resource"})
 
-            else:
-                jsonify(
-                    {
-                        "done": False,
-                        "message": "Cannot remove this tag on the selected resource",
-                    }
-                )
-
-        return jsonify({"done": False, "message": "Error removing new tag"})
+        else:
+            return (
+                jsonify({"error_message": "There was a problem removing a tag",}),
+                400,
+            )
 
     except Exception as e:
         tb1 = traceback.TracebackException.from_exception(e)

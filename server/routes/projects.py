@@ -5,7 +5,7 @@ import traceback
 from flask import Blueprint, request, abort, jsonify, Response
 
 from server.db import DB
-from server.utils.password import token_required
+from server.utils.tokenizer import token_required
 
 from server.entities.user import User
 from server.entities.project import (
@@ -16,19 +16,16 @@ from server.entities.project import (
     ProjectNotExistsException,
 )
 
-from server.utils.desobjectid import desobjectid_cursor
-
 PROJECT_NAME_LIMIT = 64
 
 projects_api = Blueprint("projects", __name__)
-
 
 @projects_api.route("/api/ping", methods=["POST"])
 @token_required
 def ping(user):
     try:
         timestamp = time.time()
-        active_project = User(user).get_active_project()
+        active_project = User(user.get("_id")).get_active_project()
         if active_project:
             updates = active_project.get_updates(timestamp)
             return jsonify(updates)
@@ -40,18 +37,12 @@ def ping(user):
         print("".join(tb1.format()))
         return jsonify({"error_message": "Server error :("}), 400
 
-
-# TODO: Delete usage of desobjectid
 @projects_api.route("/api/get_projects", methods=["POST"])
 @token_required
 def get_projects(user):
     try:
-        projects = User(user).get_projects()
-        if not projects:
-            return jsonify([])
-
-        user_projects = Projects.get_project_docs(projects, ["name", "creation_date"])
-        return jsonify(desobjectid_cursor(user_projects))
+        projects = Projects.get_project_docs()
+        return bson.json_util.dumps(projects)
 
     except Exception as e:
         print(f"Error when retrieving projects")
@@ -65,8 +56,8 @@ def get_projects(user):
 def new_project(user):
     try:
         name = request.json["name"]
-        project_id = Projects.create(name, user)
-        User(user).add_project(project_id)
+        project_id = Projects.create(name, user.get("_id"))
+        User(user.get("_id")).add_project(project_id)
 
         return jsonify({"success_message": f"New project {name} created"})
 
@@ -96,7 +87,7 @@ def rename_project(user):
         if not new_name.isalnum() or len(new_name) > PROJECT_NAME_LIMIT:
             raise ProjectNameException
 
-        if project_id in User(user).get_projects():
+        if project_id in User(user.get("_id")).get_projects():
             project = Project(project_id)
             if project.rename(new_name):
                 return jsonify({"success_message": f"Successful renaming"})
@@ -118,7 +109,7 @@ def delete_project(user):
     try:
         project_id = request.json["project_id"]
         Projects.delete(project_id)
-        User(user).remove_project(project_id)
+        User(user.get("_id")).remove_project(project_id)
 
         return jsonify({"success_message": f"Selected project deleted"})
 
@@ -143,7 +134,7 @@ def delete_project(user):
 def set_active_project(user):
     try:
         project_id = request.json["project_id"]
-        User(user).set_active_project(project_id)
+        User(user.get("_id")).set_active_project(project_id)
         return jsonify({})
 
     except Exception as e:
@@ -155,7 +146,7 @@ def set_active_project(user):
 @token_required
 def get_active_project(user):
     try:
-        active_project = User(user).get_active_project()
+        active_project = User(user.get("_id")).get_active_project()
         if not active_project:
             return jsonify({})
         else:

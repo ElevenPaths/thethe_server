@@ -2,7 +2,9 @@ import traceback
 import os
 import json
 
-import tasks.deps.sherlock.sherlock as _sherlock
+
+import tasks.deps.sherlock.sherlock.sherlock as _sherlock
+from tasks.deps.sherlock.sherlock.notify import QueryNotifyPrint
 
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
@@ -67,7 +69,13 @@ def sherlock(username, plugin_name, project_id, resource_id, resource_type):
     try:
         site_data_all = None
         data_file_path = os.path.join(
-            os.getcwd(), "tasks", "deps", "sherlock", "data.json"
+            os.getcwd(),
+            "tasks",
+            "deps",
+            "sherlock",
+            "sherlock",
+            "resources",
+            "data.json",
         )
 
         if site_data_all is None:
@@ -85,13 +93,18 @@ def sherlock(username, plugin_name, project_id, resource_id, resource_type):
                 except:
                     print("Invalid JSON loaded from file.")
 
-        result = _sherlock.sherlock(username, site_data_all, print_found_only=False)
+        result = _sherlock.sherlock(username, site_data_all, QueryNotifyPrint(),)
 
-        for service in result:
+        for site, result in result.items():
+
             temp_result = {}
-            temp_result["sitename"] = service
-            temp_result["exists"] = result.get(service).get("exists")
-            temp_result["url_user"] = result.get(service).get("url_user")
+
+            temp_result["sitename"] = site
+            temp_result["url_user"] = result.get("url_user")
+            temp_result["exists"] = (
+                "yes" if str(result["status"]) == "Claimed" else "no"
+            )
+
             response.append(temp_result)
 
         if response:

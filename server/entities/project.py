@@ -13,7 +13,6 @@ class Projects:
 
     @staticmethod
     def create(name, user):
-        # TODO: extend project name validation
         if name == "" or not name.isalnum():
             raise ProjectNameException()
 
@@ -26,6 +25,7 @@ class Projects:
                 "name": name,
                 "createdby_ref": bson.ObjectId(user),
                 "creation_date": time.time(),
+                "last_open": time.time(),
                 "resource_refs": [],  # { resource_id, resource_type }
             }
         )
@@ -38,9 +38,15 @@ class Projects:
         Projects.db.collection.delete_one({"_id": project_id})
 
     @staticmethod
-    def get_project_docs(projects=[], fields=[]):
-        fields_dict = {field: 1 for field in fields}
-        return Projects.db.collection.find({"_id": {"$in": projects}}, fields_dict)
+    def get_project_docs():
+        return Projects.db.collection.find({})
+        # return Projects.db.collection.find({"_id": {"$in": projects}})
+
+    @staticmethod
+    def search_resource_in_projects(resource_id):
+        return Projects.db.collection.find(
+            {"resource_refs.resource_id": resource_id}, {"_id": 1, "name": 1}
+        )
 
 
 class Project:
@@ -66,6 +72,11 @@ class Project:
         )
 
         return True
+
+    def set_open_timestamp(self):
+        self.db.collection.find_one_and_update(
+            {"_id": self.project_id}, {"$set": {"last_open": time.time()}}
+        )
 
     def add_resource(self, resource):
         data = {

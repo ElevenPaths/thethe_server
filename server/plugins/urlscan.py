@@ -2,6 +2,9 @@ import traceback
 import json
 import time
 import requests
+import base64
+from urllib.parse import urlparse
+
 
 from server.entities.resource_types import ResourceType
 from tasks.tasks import celery_app
@@ -28,6 +31,9 @@ API_KEY_NAMES = ["urlscan"]
 
 SUBMISSION_URL = "https://urlscan.io/api/v1/scan/"
 RESULT_URL = "https://urlscan.io/api/v1/result/{uuid}/"
+
+SCREENSHOTS_STORAGE_PATH = "/temp/urlscan/"
+SCREENSHOTS_SERVER_PATH = "static/urlscan/"
 
 
 class Plugin:
@@ -61,6 +67,20 @@ def result(uuid):
     return json.loads(url_result_response.content)
 
 
+def urlscan_screenshot(url):
+    try:
+        screenshot_name = urlparse(url).path.split("/")[-1]
+        r = requests.get(url, allow_redirects=True)
+        with open(f"{SCREENSHOTS_STORAGE_PATH}{screenshot_name}", "wb") as f:
+            f.write(r.content)
+        return f"{SCREENSHOTS_SERVER_PATH}{screenshot_name}"
+
+    except Exception as e:
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("".join(tb1.format()))
+        return None
+
+
 @celery_app.task
 def urlscan(plugin_name, project_id, resource_id, resource_type, url):
     result_status = PluginResultStatus.STARTED
@@ -74,16 +94,17 @@ def urlscan(plugin_name, project_id, resource_id, resource_type, url):
 
         else:
             headers = {
-                "User-Agent": "Mozilla/5.0 (Windows NT 6.1; WOW64; rv:64.0) Gecko/20100101 Firefox/64.0",
                 "Content-Type": "application/json",
                 "API-Key": API_KEY,
             }
-            data = {"url": url, "public": "on", "tags": ["phishing", "malicious"]}
+            data = {"url": url, "visibility": "public"}
             url_submission_response = requests.post(
                 SUBMISSION_URL, headers=headers, json=data
             )
             if not url_submission_response.status_code == 200:
-                print("API key error!")
+                print(
+                    f"[urlscan.plugin] Request Error: {url_submission_response.content}"
+                )
                 result_status = PluginResultStatus.RETURN_NONE
 
             else:
@@ -101,7 +122,23 @@ def urlscan(plugin_name, project_id, resource_id, resource_type, url):
                     time.sleep(SLEEP_FRAME)
 
                 if response:
-                    result_status = PluginResultStatus.COMPLETED
+                    if response.get("message"):
+                        # message means problems
+                        result_status = PluginResultStatus.FAILED
+                        print(f"[urlscan.plugin] {response}")
+                    else:
+                        result_status = PluginResultStatus.COMPLETED
+                        task = response.get("task")
+                        if task:
+                            screenshot_url = task.get("screenshotURL")
+                            if screenshot_url:
+                                screenshot_name = urlscan_screenshot(screenshot_url)
+                                if screenshot_name:
+                                    response["screenshot"] = screenshot_name
+                        response = base64.b64encode(
+                            json.dumps(response).encode("ascii")
+                        )
+
                 else:
                     result_status = PluginResultStatus.RETURN_NONE
 

@@ -7,7 +7,7 @@ import urllib.parse
 from bson.json_util import dumps
 from flask import Blueprint, request, abort, jsonify
 
-from server.utils.password import token_required
+from server.utils.tokenizer import token_required
 
 from server.entities.resource_manager import ResourceManager
 
@@ -29,7 +29,7 @@ def create_resource(user):
 
         resource, created = ResourceManager.get_or_create(resource_name, resource_type)
 
-        project = User(user).get_active_project()
+        project = User(user.get("_id")).get_active_project()
         project.add_resource(resource)
 
         response = []
@@ -76,19 +76,6 @@ def create_resource(user):
 def get_resources(user):
     try:
         project_id = request.json["project_id"]
-        user_projects = [str(project) for project in User(user).get_projects()]
-
-        # User unable to load the project
-        if not project_id in user_projects:
-            return (
-                jsonify(
-                    {
-                        "error_message": f"User is not allowed to load project {project_id}"
-                    }
-                ),
-                400,
-            )
-
         project = Project(project_id)
         resources = project.get_resources()
 
@@ -114,7 +101,7 @@ def unlink_resource(user):
     try:
         resource_id = bson.ObjectId(request.json["resource_id"])
 
-        project = User(user).get_active_project()
+        project = User(user.get("_id")).get_active_project()
         project.remove_resource(resource_id)
 
         return jsonify({"success_message": "Resource unlinked from project"})

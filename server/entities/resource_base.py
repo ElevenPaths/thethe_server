@@ -4,6 +4,7 @@ import bson
 import pymongo
 import time
 import urllib.parse
+import base64
 
 
 from server.db import DB
@@ -96,13 +97,12 @@ class Resource:
     def create(name, resource_type):
         """
             name: name of the resource
-            type: type as ResourceType
+            resource_type: type as ResourceType
         """
         args = {
             "canonical_name": name,
             "resource_type": resource_type.value,
             "creation_time": time.time(),
-            "plugins": [],
             "tags": [],
         }
 
@@ -171,44 +171,23 @@ class Resource:
 
     def add_tag(self, tag):
         try:
-            if "tags" in self.resource:
-                if not tag["name"] in [t["name"] for t in self.resource["tags"]]:
-                    self.resource["tags"].append(tag)
-            else:
-                self.resource["tags"] = [tag]
-
-            self.get_collection().replace_one({"_id": self.resource_id}, self.resource)
-
-            return True
+            return self.get_collection().find_one_and_update(
+                {"_id": self.resource_id}, {"$addToSet": {"tags": bson.ObjectId(tag)}}
+            )
 
         except Exception as e:
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
-            return False
 
     def remove_tag(self, tag):
         try:
-            if "tags" in self.resource:
-
-                # If the tag is in, get it out (DELETE)
-                if tag["name"] in [t["name"] for t in self.resource["tags"]]:
-                    self.resource["tags"] = [
-                        t for t in self.resource["tags"] if not t["name"] == tag["name"]
-                    ]
-
-                    self.get_collection().replace_one(
-                        {"_id": self.resource_id}, self.resource
-                    )
-
-                return True
-
-            else:
-                return False
+            return self.get_collection().find_one_and_update(
+                {"_id": self.resource_id}, {"$pull": {"tags": bson.ObjectId(tag)}}
+            )
 
         except Exception as e:
             tb1 = traceback.TracebackException.from_exception(e)
             print("".join(tb1.format()))
-            return False
 
     def resource_json(self):
         doc = self.resource

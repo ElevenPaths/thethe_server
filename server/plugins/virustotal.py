@@ -21,12 +21,12 @@ RESOURCE_TARGET = [
     ResourceType.URL,
     ResourceType.HASH,
     ResourceType.DOMAIN,
-    ResourceType.IPv4
+    ResourceType.IPv4,
 ]
 
 # Plugin Metadata {a description, if target is actively reached and name}
 PLUGIN_AUTOSTART = False
-PLUGIN_DESCRIPTION = "Search a ip|domain|hash|url in VirusTotal"
+PLUGIN_DESCRIPTION = "Search a ip | domain | hash | url in VirusTotal"
 PLUGIN_DISABLE = False
 PLUGIN_IS_ACTIVE = False
 PLUGIN_NAME = "virustotal"

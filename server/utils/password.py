@@ -1,9 +1,41 @@
 import traceback
 
+from zxcvbn import zxcvbn
 from passlib.apps import custom_app_context as pwd_context
-from functools import wraps
-from flask import request, jsonify
-from server.utils import tokenizer
+
+MIN_PASSWORD_LENGHT = 8
+
+
+def check_password(password1, password2=None):
+    if password2:
+        if not password1 == password2:
+            return (False, "New password does not match")
+
+    if len(password1) < MIN_PASSWORD_LENGHT:
+        return (False, f"New password must be {MIN_PASSWORD_LENGHT} at least")
+
+    if not check_pass_strengh(password1):
+        return (
+            False,
+            f"Password is not strong enough. Min {MIN_PASSWORD_LENGHT} chars length. Mix alphanums and symbols",
+        )
+
+    return (True, "Password is valid")
+
+
+def check_pass_strengh(candidate_pass):
+    try:
+        if not candidate_pass:
+            return False
+        result = zxcvbn(candidate_pass)
+        if result.get("score") >= 2:
+            return True
+        return False
+
+    except Exception as e:
+        tb1 = traceback.TracebackException.from_exception(e)
+        print("[_check_pass_strengh]")
+        print("".join(tb1.format()))
 
 
 def hash_password(password):
@@ -13,31 +45,3 @@ def hash_password(password):
 
 def verify_password(password, password_hash):
     return pwd_context.verify(password, password_hash)
-
-
-def token_required(f):
-    @wraps(f)
-    def decorated_function(*args, **kargs):
-        try:
-            if not "Authorization" in request.headers:
-                return (
-                    jsonify({"error_message": "No authorization header in request"}),
-                    401,
-                )
-            user = None
-            token = request.headers["Authorization"]
-            user = tokenizer.verify_auth_token(token)
-            if user:
-                user = user["id"]
-                return f(user, *args, **kargs)
-            else:
-                return (
-                    jsonify({"error_message": "Non valid token"}),
-                    401,
-                )
-        except Exception as e:
-            tb1 = traceback.TracebackException.from_exception(e)
-            print("".join(tb1.format()))
-            return jsonify({"error_message": "Non valid token"}), 401
-
-    return decorated_function

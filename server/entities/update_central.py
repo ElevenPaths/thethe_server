@@ -4,6 +4,7 @@ import time
 from server.db import DB
 from server.entities.plugin_result_types import PluginResultStatus
 
+PURGUE_LAST = 24 * 60 * 60  # 24 hours
 
 class UpdateCentral:
     def __init__(self):
@@ -60,8 +61,20 @@ class UpdateCentral:
                 }
             )
 
-        self.db.collection.delete_many(
-            {"project_id": project_id, "timestamp": {"$lte": timestamp}}
-        )
+        # Leverage 'ping' to purgue old updates
+        self.purge_updates(timestamp)
 
         return updates
+
+
+    def get_last_update(self):
+        for i in (
+            self.db.collection.find({}, {"timestamp": True})
+            .sort([("timestamp", -1)])
+            .limit(1)
+        ):
+            return i
+        return None
+
+    def purge_updates(self, ts):
+        self.db.collection.delete_many({"timestamp": {"$lte": ts - PURGUE_LAST}})

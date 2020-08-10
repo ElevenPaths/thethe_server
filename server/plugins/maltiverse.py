@@ -140,6 +140,8 @@ def maltiverse(plugin_name, project_id, resource_id, resource_type, target):
                 result_status = PluginResultStatus.RETURN_NONE
 
             if not query_result:
+                result_status = PluginResultStatus.FAILED
+            if query_result.get("message"):
                 result_status = PluginResultStatus.RETURN_NONE
             else:
                 result_status = PluginResultStatus.COMPLETED
