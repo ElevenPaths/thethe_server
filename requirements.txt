@@ -28,14 +28,14 @@ google-auth==1.7.0
 google-auth-httplib2==0.0.3
 gunicorn==19.9.0
 html5lib==1.0b10
-httplib2==0.14.0
+httplib2==0.19.0
 idna==2.8
 importlib-metadata==0.23
 instaloader==4.4.4
 ipwhois==1.1.0
 Jinja2==2.11.3
 kombu==4.6.6
-lxml==4.4.1
+lxml==4.6.2
 MarkupSafe==1.1.0
 mongoengine
 more-itertools==7.2.0
@@ -67,7 +67,7 @@ toml==0.10.0
 torrequest==0.1.0
 tweepy==3.8.0
 uritemplate==3.0.0
-urllib3==1.22
+urllib3==1.24.2
 validators==0.14.0
 vine==1.3.0
 watchdog==0.9.0
