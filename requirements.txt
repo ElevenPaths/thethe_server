@@ -49,7 +49,7 @@ python-jose==3.2.0
 PyJWT==1.7.1
 python-whois==0.7.2
 pytz==2018.9
-PyYAML==5.2
+PyYAML==5.4
 redis==3.2.0
 requests==2.22.0
 requests-futures==1.0.0
