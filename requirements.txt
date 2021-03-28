@@ -35,7 +35,7 @@ instaloader==4.4.4
 ipwhois==1.1.0
 Jinja2==2.11.3
 kombu==4.6.6
-lxml==4.6.2
+lxml==4.6.3
 MarkupSafe==1.1.0
 mongoengine
 more-itertools==7.2.0
