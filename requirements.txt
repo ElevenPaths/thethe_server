@@ -55,7 +55,7 @@ requests==2.22.0
 requests-futures==1.0.0
 requests-toolbelt==0.9.1
 rope==0.14.0
-rsa==4.1
+rsa==4.7
 sdklib==1.10.3
 shodan==1.19.0
 six==1.12.0
